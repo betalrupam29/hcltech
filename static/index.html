@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HLC Bank Internal Assistant</title>
+
+<style>
+:root {
+    --hlc-blue: #003366;
+    --hlc-gold: #c5a059;
+    --bg: #f4f7f6;
+}
+
+body {
+    font-family: "Segoe UI", sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 20px;
+}
+
+#chat-box {
+    max-width: 900px;
+    height: 90vh;
+    margin: auto;
+    background: #fff;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border-top: 6px solid var(--hlc-blue);
+}
+
+header {
+    text-align: center;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+#messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.msg {
+    max-width: 75%;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    border-radius: 14px;
+    line-height: 1.5;
+}
+
+.user {
+    align-self: flex-end;
+    background: #e3f2fd;
+    color: #0d47a1;
+}
+
+.bot {
+    align-self: flex-start;
+    background: #f5f5f5;
+    border-left: 5px solid var(--hlc-gold);
+}
+
+#input-area {
+    display: flex;
+    padding: 15px;
+    border-top: 1px solid #eee;
+}
+
+input {
+    flex: 1;
+    padding: 12px 15px;
+    border-radius: 25px;
+    border: 1px solid #ccc;
+    outline: none;
+}
+
+button {
+    margin-left: 10px;
+    padding: 10px 22px;
+    border-radius: 25px;
+    border: none;
+    background: var(--hlc-blue);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button:disabled {
+    background: #aaa;
+}
+
+.email-draft {
+    background: #fffbea;
+    border-left: 5px solid #f4b400;
+    padding: 12px;
+    border-radius: 10px;
+    margin-top: 10px;
+    font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="chat-box">
+    <header>
+        <h2 style="margin:0;color:var(--hlc-blue)">HLC Tech Assistant</h2>
+        <small>RAG + HR Email Tool</small>
+    </header>
+
+    <div id="messages">
+        <div class="msg bot">
+            Welcome 👋 I can answer policy questions or help you contact HR.
+        </div>
+    </div>
+
+    <div id="input-area">
+        <input id="query" placeholder="Type your message..." />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+const API_URL = "/query";
+const sessionId = crypto.randomUUID();
+
+async function sendMessage() {
+    const input = document.getElementById("query");
+    const text = input.value.trim();
+    if (!text) return;
+
+    addMessage(text, "user");
+    input.value = "";
+
+    const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            session_id: sessionId,
+            user_query: text
+        })
+    });
+
+    const data = await response.json();
+
+    if (data.draft_email) {
+        showDraft(data);
+    } else {
+        addMessage(data.answer, "bot");
+    }
+}
+
+function addMessage(text, type) {
+    const div = document.createElement("div");
+    div.className = `msg ${type}`;
+    div.innerText = text;
+    document.getElementById("messages").appendChild(div);
+    scrollDown();
+}
+
+function showDraft(data) {
+    const box = document.createElement("div");
+    box.className = "msg bot";
+
+    box.innerHTML = `
+        <b>📧 Draft Email to HR</b>
+        <div class="email-draft">
+            <b>To:</b> ${data.draft_email.to}<br>
+            <b>Subject:</b> ${data.draft_email.subject}<br><br>
+            <pre>${data.draft_email.body}</pre>
+        </div>
+        <b>${data.message}</b>
+    `;
+
+    document.getElementById("messages").appendChild(box);
+    scrollDown();
+}
+
+function scrollDown() {
+    const m = document.getElementById("messages");
+    m.scrollTop = m.scrollHeight;
+}
+</script>
+
+</body>
+</html>
